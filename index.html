@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/framer-motion@11.0.8/dist/framer-motion.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
@@ -67,7 +67,15 @@
          * SPDX-License-Identifier: Apache-2.0
          */
         const { useState, useEffect, useMemo, useRef } = React;
-        const { motion, AnimatePresence } = window.Motion;
+        
+        // --- Library Mapping ---
+        // Framer Motion via CDN can be tricky with global names
+        const motion = window.Motion ? window.Motion.motion : (window.framerMotion ? window.framerMotion.motion : null);
+        const AnimatePresence = window.Motion ? window.Motion.AnimatePresence : (window.framerMotion ? window.framerMotion.AnimatePresence : null);
+
+        if (!motion) {
+            console.error("Framer Motion not loaded correctly. Please check CDN.");
+        }
 
         // --- Lucide Icon component for React/CDN ---
         const Icon = ({ name, size = 24, className = "" }) => {
