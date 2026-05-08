@@ -67,7 +67,7 @@
          * SPDX-License-Identifier: Apache-2.0
          */
         const { useState, useEffect, useMemo, useRef } = React;
-        const { motion, AnimatePresence } = FramerMotion;
+        const { motion, AnimatePresence } = window.Motion;
 
         // --- Lucide Icon component for React/CDN ---
         const Icon = ({ name, size = 24, className = "" }) => {
