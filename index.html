@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>별문장 (Star-Sentence) : 당신의 밤이 문장으로 물드는 시간</title>
+    
+    <!-- Fonts: Noto Serif KR & Cormorant Garamond -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+KR:wght@200;300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- External Libraries (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-deep: #05070A;
+        }
+        body {
+            margin: 0;
+            background-color: var(--bg-deep);
+            color: #E2E8F0;
+            font-family: 'Noto Serif KR', serif;
+            overflow-x: hidden;
+        }
+        .serif-display { font-family: 'Cormorant Garamond', serif; }
+        .korean-serif { font-family: 'Noto Serif KR', serif; line-height: 1.8; }
+        .atmosphere {
+            background: 
+                radial-gradient(circle at 20% 30%, #1A1F35 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, #120B2E 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, #05070A 0%, #000 100%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-text { text-shadow: 0 0 15px rgba(255, 255, 255, 0.25); }
+        .tracking-celestial { letter-spacing: 0.3em; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+
+        .loading-glow {
+            animation: loading-pulse 3s infinite ease-in-out;
+        }
+        @keyframes loading-pulse {
+            0%, 100% { opacity: 0.1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.5); }
+        }
+    </style>
+</head>
+<body class="atmosphere min-h-screen relative">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        /**
+         * @license
+         * SPDX-License-Identifier: Apache-2.0
+         */
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { motion, AnimatePresence } = FramerMotion;
+
+        // --- Lucide Icon component for React/CDN ---
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons({
+                        attrs: { class: className },
+                        nameAttr: 'data-lucide'
+                    });
+                }
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        // --- Gemini Integration Logic ---
+        // 클라이언트 사이드에서 작동하려면 사용자가 직접 자신의 API 키를 입력하게 하거나 환경변수를 사용합니다.
+        async function getSentenceFromAI(emotion, apiKey) {
+            if (!apiKey) throw new Error("API 키가 필요합니다.");
+            
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            const prompt = `당신은 청소년들을 위로하는 다정한 문학 큐레이터입니다.
+            사용자가 느끼는 감정: "${emotion}"
+            
+            이 감정에 어울리는 고전/현대 문학의 한 문장을 추천하고 JSON 형식으로만 답변하세요.
+            응답 구조:
+            {
+              "sentence": "문장 내용",
+              "author": "작가 이름",
+              "bookTitle": "책 제목",
+              "explanation": "이 문장이 사용자에게 어떤 위로가 되는지에 대한 따뜻한 설명 (2~3문장)"
+            }`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            if (!response.ok) throw new Error("밤하늘과의 연결이 원활하지 않습니다.");
+            
+            const data = await response.json();
+            return JSON.parse(data.candidates[0].content.parts[0].text);
+        }
+
+        // --- Components ---
+
+        const StarrySky = () => {
+            const stars = useMemo(() => Array.from({ length: 80 }).map((_, i) => ({
+                id: i, x: Math.random() * 100, y: Math.random() * 100,
+                size: Math.random() * 2 + 1, opacity: Math.random() * 0.7 + 0.3,
+                duration: Math.random() * 3 + 2
+            })), []);
+
+            return (
+                <div className="fixed inset-0 z-0 pointer-events-none">
+                    {stars.map(star => (
+                        <motion.div key={star.id} className="absolute rounded-full bg-white"
+                            style={{ left: `${star.x}%`, top: `${star.y}%`, width: star.size, height: star.size }}
+                            animate={{ opacity: [star.opacity, 0.1, star.opacity], scale: [1, 1.2, 1] }}
+                            transition={{ duration: star.duration, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                    ))}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                </div>
+            );
+        };
+
+        const EmotionInput = ({ onSend, isLoading }) => {
+            const [text, setText] = useState("");
+            return (
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    className="w-full grid grid-cols-1 md:grid-cols-12 gap-12 items-center max-w-6xl"
+                >
+                    <div className="md:col-span-4 space-y-6">
+                        <div className="space-y-2">
+                            <span className="text-[10px] tracking-[0.3em] text-white/30 uppercase block font-semibold">Emotional Echo</span>
+                            <h2 className="text-4xl font-light leading-snug korean-serif glow-text text-white">
+                                오늘 당신의 밤은<br/>어떤 색인가요?
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-4 pt-4">
+                            <div className="flex -space-x-3">
+                                {[1, 2, 3].map(i => <div key={i} className="w-8 h-8 rounded-full border border-white/10 glass-card" />)}
+                            </div>
+                            <p className="text-[10px] text-white/30 italic tracking-wider">지금 1,248명의 별들이 같은 하늘을 보고 있습니다.</p>
+                        </div>
+                    </div>
+
+                    <div className="md:col-span-8">
+                        <div className="glass-card p-10 rounded-[2.5rem] shadow-2xl relative group">
+                            <textarea 
+                                value={text} 
+                                onChange={e => setText(e.target.value)}
+                                className="bg-transparent w-full h-48 border-none outline-none text-white/80 placeholder:text-white/20 korean-serif text-xl leading-relaxed resize-none focus:ring-0"
+                                placeholder="누구에게도 말하지 못한 마음의 한 조각을 적어주세요..."
+                                disabled={isLoading}
+                            />
+                            <button 
+                                onClick={() => onSend(text)} 
+                                disabled={!text.trim() || isLoading}
+                                className="w-full py-5 mt-4 border border-white/10 rounded-2xl text-[11px] tracking-[0.3em] uppercase text-white/60 hover:text-white hover:bg-white/5 transition-all disabled:opacity-20"
+                            >
+                                {isLoading ? "기다리는 중..." : "Find My Star"}
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        };
+
+        const SentenceCard = ({ data, onTranscribe }) => (
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-12 md:p-20 rounded-[4rem] w-full max-w-3xl text-center relative overflow-hidden"
+            >
+                <div className="absolute -top-6 -left-6 w-20 h-20 flex items-center justify-center opacity-10">
+                    <span className="text-8xl serif-display">“</span>
+                </div>
+                
+                <div className="relative z-10 space-y-16">
+                    <div className="space-y-8">
+                        <p className="text-2xl md:text-3xl korean-serif text-white/95 glow-text italic leading-[1.9]">
+                            "{data.sentence}"
+                        </p>
+                        <div className="w-16 h-[1px] bg-white/20 mx-auto" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-lg text-white/70 korean-serif font-light">{data.bookTitle}</p>
+                        <p className="text-[10px] uppercase tracking-celestial text-white/30 serif-display">{data.author}</p>
+                    </div>
+
+                    <p className="max-w-lg mx-auto text-slate-400 text-sm leading-relaxed korean-serif italic font-light">
+                        {data.explanation}
+                    </p>
+
+                    <div className="flex justify-center gap-16 pt-4">
+                        <button className="flex flex-col items-center gap-3 group transition-transform hover:-translate-y-1">
+                            <div className="w-14 h-14 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition-all">
+                                <Icon name="heart" size={20} className="text-white/30 group-hover:text-pink-500/80 transition-colors" />
+                            </div>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">Connect</span>
+                        </button>
+                        <button onClick={onTranscribe} className="flex flex-col items-center gap-3 group transition-transform hover:-translate-y-1">
+                            <div className="w-14 h-14 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition-all">
+                                <Icon name="edit-3" size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                            </div>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">Transcribe</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="absolute w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -bottom-40 -right-40" />
+            </motion.div>
+        );
+
+        const TranscriptionBoard = ({ sentence, onBack }) => {
+            const [input, setInput] = useState("");
+            const isComplete = input.trim() === sentence.trim();
+
+            return (
+                <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-2xl space-y-12">
+                    <button onClick={onBack} className="flex items-center text-white/30 hover:text-white/60 transition-colors group uppercase text-[10px] tracking-widest font-medium">
+                        <Icon name="chevron-left" size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+                        <span>Return to the night</span>
+                    </button>
+
+                    <div className="space-y-8">
+                        <div className="p-10 glass-card rounded-[2.5rem] space-y-4">
+                            <p className="text-[10px] text-white/20 uppercase tracking-widest font-semibold italic">Original Passage</p>
+                            <p className="text-xl md:text-2xl korean-serif leading-relaxed text-white/40 select-none italic">{sentence}</p>
+                        </div>
+                        <div className="relative">
+                            <textarea 
+                                value={input} 
+                                onChange={e => setInput(e.target.value)}
+                                className={`w-full h-64 p-10 glass-card rounded-[3rem] text-xl md:text-2xl korean-serif leading-relaxed resize-none focus:outline-none transition-all ${isComplete ? "ring-1 ring-white/30" : ""}`}
+                                placeholder="이곳에 문장을 천천히 필사해보세요..."
+                            />
+                            {isComplete && (
+                                <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-8 right-8 text-white/50">
+                                    <Icon name="check-circle-2" size={24} />
+                                </motion.div>
+                            )}
+                        </div>
+                    </div>
+                    {isComplete && (
+                        <p className="text-center text-white/40 text-sm italic korean-serif animate-pulse">마음을 정갈히 비우는 소중한 시간이었습니다.</p>
+                    )}
+                </motion.div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState("input"); // input, loading, result, transcription
+            const [data, setData] = useState(null);
+            const [apiKey, setApiKey] = useState(localStorage.getItem('STAR_SENTENCE_KEY') || "");
+            const [showSettings, setShowSettings] = useState(false);
+
+            const handleSend = async (emotion) => {
+                if (!apiKey) {
+                    alert("설정에서 Gemini API 키를 먼저 입력해주세요.");
+                    setShowSettings(true);
+                    return;
+                }
+                setView("loading");
+                try {
+                    const result = await getSentenceFromAI(emotion, apiKey);
+                    setData(result);
+                    setView("result");
+                } catch (e) {
+                    alert(e.message);
+                    setView("input");
+                }
+            };
+
+            const saveApiKey = (key) => {
+                setApiKey(key);
+                localStorage.setItem('STAR_SENTENCE_KEY', key);
+                setShowSettings(false);
+            };
+
+            return (
+                <div className="min-h-screen p-6 md:p-12 flex flex-col items-center">
+                    <StarrySky />
+                    
+                    {/* Header/Nav */}
+                    <nav className="w-full max-w-6xl flex justify-between items-center mb-24 z-10">
+                        <div onClick={() => setView("input")} className="flex items-center gap-4 cursor-pointer">
+                            <div className="w-9 h-9 rounded-full border border-white/40 flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                            </div>
+                            <h1 className="text-2xl font-light tracking-celestial serif-display uppercase text-white">Star-Sentence</h1>
+                        </div>
+                        <div className="flex gap-8 items-center">
+                            <div className="hidden md:block text-[11px] tracking-[0.3em] text-white/20 uppercase italic">the night is still young</div>
+                            <button onClick={() => setShowSettings(true)} className="text-white/30 hover:text-white transition-colors">
+                                <Icon name="settings" size={20} />
+                            </button>
+                        </div>
+                    </nav>
+
+                    {/* Main Section */}
+                    <main className="flex-1 w-full flex flex-col items-center justify-center z-10 pb-20">
+                        <AnimatePresence mode="wait">
+                            {view === "input" && <EmotionInput key="input" onSend={handleSend} isLoading={false} />}
+                            
+                            {view === "loading" && (
+                                <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-12">
+                                    <div className="relative mx-auto w-32 h-32 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-[80px] loading-glow" />
+                                        <Icon name="sparkles" size={40} className="text-white/40 animate-pulse" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h2 className="text-3xl korean-serif font-light glow-text italic">밤하늘에 당신의 별을 띄우는 중...</h2>
+                                        <p className="text-[10px] tracking-[0.3em] text-white/20 uppercase">Forging Constellations</p>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {view === "result" && data && (
+                                <SentenceCard key="result" data={data} onTranscribe={() => setView("transcription")} />
+                            )}
+
+                            {view === "transcription" && data && (
+                                <TranscriptionBoard key="transcription" sentence={data.sentence} onBack={() => setView("result")} />
+                            )}
+                        </AnimatePresence>
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="fixed bottom-0 left-0 right-0 z-20 px-10 py-8 border-t border-white/5 flex justify-between items-center text-[10px] tracking-celestial text-white/20 uppercase">
+                        <div className="serif-display italic lowercase tracking-normal text-xs">solace for the wandering souls</div>
+                        <div className="hidden sm:block">Seoul Nightview — {new Date().toLocaleTimeString()}</div>
+                        <div className="flex gap-8">
+                            <span>IG</span><span>TW</span><span>DM</span>
+                        </div>
+                    </footer>
+
+                    {/* API Key Modal */}
+                    <AnimatePresence>
+                        {showSettings && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                                <div className="glass-card p-10 rounded-[2.5rem] w-full max-w-md space-y-6">
+                                    <h3 className="text-xl korean-serif font-light text-white">API 설정</h3>
+                                    <p className="text-xs text-white/40 leading-relaxed font-light">
+                                        이 앱은 Gemini AI를 사용합니다. 작동을 위해 Google AI Studio에서 발급받은 API 키가 필요합니다.
+                                        키는 브라우저 로컬 저장소에만 저장됩니다.
+                                    </p>
+                                    <input 
+                                        type="password" 
+                                        defaultValue={apiKey}
+                                        onBlur={(e) => saveApiKey(e.target.value)}
+                                        placeholder="API Key 입력 후 저장"
+                                        className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-white outline-none focus:border-white/30"
+                                    />
+                                    <button onClick={() => setShowSettings(false)} className="w-full py-4 text-[10px] tracking-widest uppercase text-white/40 hover:text-white transition-colors">Close</button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

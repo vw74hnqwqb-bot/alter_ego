@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Noto+Serif+KR:wght@200;300;400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif-en: "Cormorant Garamond", serif;
+  --font-serif-kr: "Noto Serif KR", serif;
+
+  --color-sky-deep: #05070A;
+  --color-star-white: #f8fafc;
+  --color-accent-blue: #3b82f6;
+}
+
+@layer utilities {
+  .atmosphere-bg {
+    background: 
+      radial-gradient(circle at 20% 30%, #1A1F35 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, #120B2E 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, #05070A 0%, #000 100%);
+    background-color: var(--color-sky-deep);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
+  }
+
+  .tracking-celestial {
+    letter-spacing: 0.3em;
+  }
+}
+
+body {
+  @apply bg-sky-deep text-slate-200 antialiased;
+  font-family: var(--font-serif-kr);
+}
+
+.serif-display {
+  font-family: var(--font-serif-en);
+}
+
+.korean-serif {
+  font-family: var(--font-serif-kr);
+}
+
+/* Scrollbar matching the theme */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
