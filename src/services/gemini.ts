@@ -18,29 +18,33 @@ export async function curateSentence(userEmotion: string): Promise<CuratedSenten
 
 출력은 반드시 JSON 형식이어야 합니다.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          sentence: { type: Type.STRING, description: "선정된 문학의 한 문장" },
-          author: { type: Type.STRING, description: "작가 이름" },
-          bookTitle: { type: Type.STRING, description: "책 제목" },
-          explanation: { type: Type.STRING, description: "문장에 대한 다정한 위로의 설명" },
-        },
-        required: ["sentence", "author", "bookTitle", "explanation"],
-      },
-    },
-  });
-
   try {
-    const result = JSON.parse(response.text || "{}");
-    return result as CuratedSentence;
-  } catch (error) {
-    console.error("Failed to parse Gemini response:", error);
-    throw new Error("문장을 가져오는 데 실패했습니다.");
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            sentence: { type: Type.STRING, description: "선정된 문학의 한 문장" },
+            author: { type: Type.STRING, description: "작가 이름" },
+            bookTitle: { type: Type.STRING, description: "책 제목" },
+            explanation: { type: Type.STRING, description: "문장에 대한 다정한 위로의 설명" },
+          },
+          required: ["sentence", "author", "bookTitle", "explanation"],
+        },
+      },
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("No response from AI model.");
+    }
+
+    return JSON.parse(text) as CuratedSentence;
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    throw new Error(error.message || "문장을 가져오는 데 실패했습니다.");
   }
 }
