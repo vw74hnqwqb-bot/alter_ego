@@ -1,6 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+const getApiKey = () => {
+  // Vite environment variables (VITE_ prefix is required for client-side access)
+  const key = import.meta.env.VITE_GEMINI_API_KEY;
+  if (key && key !== "undefined" && key !== "") return key;
+  
+  // Fallback for different build environments
+  return (window as any)._GEMINI_API_KEY || "";
+};
+
+const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey });
 
 export interface CuratedSentence {

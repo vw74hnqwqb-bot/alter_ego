@@ -23,7 +23,13 @@ export default function App() {
       setView("result");
     } catch (err) {
       console.error(err);
-      setError("밤하늘의 연결이 잠시 불안정합니다. 조금 뒤에 다시 시도해주세요.");
+      const isApiKeyMissing = !import.meta.env.VITE_GEMINI_API_KEY && !(window as any)._GEMINI_API_KEY;
+      const errorMsg = isApiKeyMissing 
+        ? "API 키가 설정되지 않았습니다. GitHub Secrets 설정을 확인해주세요."
+        : "밤하늘의 연결이 잠시 불안정합니다. 조금 뒤에 다시 시도해주세요.";
+      
+      setError(errorMsg);
+      alert(errorMsg); // Show alert since it's a critical connectivity issue
       setView("input");
     }
   };
